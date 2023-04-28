@@ -25,9 +25,6 @@ int main(int argc, char *argv[])
     CAN = new canDriver();
     if(appLog::options.contains("-loopback")) loopback = true;
     CAN->driverOpen(Application::CAN_BAUDRATE, loopback);
-
-    QObject::connect(CAN,SIGNAL(receivedCanFrame(ushort , QByteArray )), INTERFACE, SLOT(receivedCanFrame(ushort , QByteArray)),Qt::QueuedConnection);
-    QObject::connect(INTERFACE,SIGNAL(sendToCan(ushort , QByteArray )), CAN, SLOT(sendOnCanSlot(ushort , QByteArray)),Qt::QueuedConnection);
     INTERFACE->Start();
 
     return a.exec();

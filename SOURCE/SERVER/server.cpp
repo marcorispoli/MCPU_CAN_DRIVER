@@ -2,6 +2,7 @@
 #include <QStringConverter>
 
 
+
 /**
  * This function create the server structure.
  *
@@ -82,12 +83,11 @@ void Server::incomingConnection(qintptr socketDescriptor)
 
     connect(item,SIGNAL(itemDisconnected(ushort )),this, SLOT(disconnected(ushort )),Qt::UniqueConnection);
     connect(item->socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),item,SLOT(socketError(QAbstractSocket::SocketError)),Qt::UniqueConnection);
-    connect(item,SIGNAL(sendToCan(ushort, QByteArray )),this, SLOT(sendToCanSlot(ushort, QByteArray )),Qt::UniqueConnection);
 
     item->id = this->idseq++;
     item->filter_mask = 0xFFFF;
     item->filter_address = 0; // No device registered yet
-
+    item->dataPresent = false;
     return;
  }
 
@@ -133,21 +133,7 @@ void Server::disconnected(ushort id)
 
 }
 
-/**
- * This Slot is connected to the internal client socket reception
- * procedure.
- *
- * When a can frame shall be sent from the client, this SLot makes
- * a bridge from the client socket and the canDriver.
- *
- * @param canId: identifier of the target CAN device;
- * @param dataFrame: the CAN data content.
- */
-void Server::sendToCanSlot(ushort canId, QByteArray dataFrame)
-{
 
-    emit sendToCan(canId, dataFrame);
-}
 
 ushort SocketItem::getItem(int* index, QByteArray* data, bool* data_ok){
     *data_ok = false;
@@ -238,11 +224,13 @@ void SocketItem::handleSocketFrame(QByteArray* data){
         return;
     }else{
 
+        // A data is waiting to be sent
+        if(dataPresent) return;
+
         frame.clear();
         ushort canid = getItem(&i, data, &data_ok);
-        if(!data_ok) {
-            return;
-        }
+        if(!data_ok) return;
+
         ushort val;
         for(; (i< data->size()) && (frame.size() <= 8) ; i++){
             val = getItem(&i, data, &data_ok);
@@ -251,7 +239,12 @@ void SocketItem::handleSocketFrame(QByteArray* data){
         }
 
         // If a valid set of data has been identified they will be sent to the driver        
-        if(frame.size()) emit sendToCan(canid,frame);
+        if(frame.size()){
+            txCanId = canid;
+            txData = frame;
+            dataPresent = true;
+            //emit sendToCan(canid,frame);
+        }
     }
 
 }
@@ -320,19 +313,19 @@ void SocketItem::socketTxData(QByteArray data)
  * @param canId: this is the canId of the can message
  * @param data: this is the data content of the frame
  */
-void Server::receivedCanFrame(ushort canId, QByteArray data){
+void Server::rxCanFrameHandle(ushort* canId, QByteArray* data){
     QByteArray frame;
     frame.append("<D ");
-    frame.append(QString("%1 ").arg((ushort) canId).toLatin1());
+    frame.append(QString("%1 ").arg(*canId).toLatin1());
 
     for(int i=0; i< 8;i++){
-        if(i >= data.size()) frame.append("0 ");
-        else frame.append(QString("%1 ").arg((uchar) data[i]).toLatin1());
+        if(i >= data->size()) frame.append("0 ");
+        else frame.append(QString("%1 ").arg((uchar) data->at(i)).toLatin1());
     }
     frame += " > \n\r";
 
     for(int i =0; i< socketList.size(); i++){
-        if( (socketList[i]->filter_mask & canId) == (socketList[i]->filter_address)){
+        if( (socketList[i]->filter_mask & *canId) == (socketList[i]->filter_address)){
             socketList[i]->socket->write(frame);
             socketList[i]->socket->waitForBytesWritten(100);
         }
@@ -340,4 +333,23 @@ void Server::receivedCanFrame(ushort canId, QByteArray data){
 
 }
 
+bool Server::getNextTxFrame(uint16_t* pcanId, QByteArray* pdata){
+    static uint8_t idx =0;
+
+
+    for(int i =0; i< socketList.size(); i++){
+        if(idx >= socketList.size()) idx = 0;
+
+        if(socketList[idx]->dataPresent){
+            *pcanId = (socketList[idx]->txCanId);
+            *pdata =  (socketList[idx]->txData);
+            socketList[idx]->dataPresent = false;
+            idx++;
+            return true;
+        }
+        idx++;
+    }
+
+    return false;
+}
 

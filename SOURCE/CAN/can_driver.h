@@ -80,9 +80,13 @@ class canDriver: public QObject
 
 signals:
     void receivedCanFrame(ushort id, QByteArray data); //!< Signal emitted when a CAN frame is received
+    void transmittedCanFrame(ushort id, QByteArray data); //!< Signal emitted when a CAN frame is transmitted
 
 public slots:
-    void sendOnCanSlot(ushort canId, QByteArray data); //!< Slot function activated when a Frame shall be sent on the CAN bus
+
+
+private slots:
+    void canTimerEvent(void);   //!< Timer scheduled to read the queue of the received messages
 
 private:
     VSCAN_API_VERSION   version;    //!< System Driver Api Version
@@ -93,11 +97,15 @@ private:
 
     ushort rxCanId; //!< canId of the pending can message
     QByteArray rxCanData; //!< Data of the can frame
-    void timerEvent(QTimerEvent* ev);   //!< Timer scheduled to read the queue of the received messages
-    int canTimer;
 
-    void sendTestMessage(ushort canId, QByteArray data);
+    QTimer canTimer;
+    bool   rxEvent;
+    uint8_t rxClientId;
+
     void printErrors(void);
+    void canSendFrame(void); //!< Sends on the CAN bus
+    QByteArray txData;
+    uint16_t txCanId;
 };
 
 #endif // VSCAN_CAN_DRIVER_H

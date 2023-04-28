@@ -151,10 +151,10 @@ void debugWindow::on_logEnableEthCheck_stateChanged(int arg1)
 
     static bool connected = false;
     if(arg1){
-        if(!connected) connect(INTERFACE,SIGNAL(sendToCan(ushort , QByteArray )), WINDOW, SLOT(sendToCan(ushort , QByteArray)),Qt::QueuedConnection);
+        if(!connected) connect(CAN,SIGNAL(transmittedCanFrame(ushort , QByteArray )), WINDOW, SLOT(sendToCan(ushort , QByteArray)),Qt::QueuedConnection);
         connected = true;
     }else{
-        disconnect(INTERFACE,SIGNAL(sendToCan(ushort , QByteArray )), WINDOW, SLOT(sendToCan(ushort , QByteArray)));
+        disconnect(CAN,SIGNAL(transmittedCanFrame(ushort , QByteArray )), WINDOW, SLOT(sendToCan(ushort , QByteArray)));
         connected = false;
 
     }

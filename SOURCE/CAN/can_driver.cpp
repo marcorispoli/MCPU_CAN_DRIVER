@@ -5,7 +5,8 @@
  * @brief canDriver class constructor
  */
 canDriver::canDriver(){
-    canTimer=0;
+
+    connect(&canTimer, SIGNAL(timeout()), this, SLOT(canTimerEvent()), Qt::UniqueConnection);
     for(int i=0; i<8; i++)    rxCanData.append((uchar) 0);
     handle = 0;
 }
@@ -144,8 +145,10 @@ bool canDriver::driverOpen(_CanBR BR, bool loopback){
     //VSCAN_Ioctl(NULL, VSCAN_IOCTL_SET_DEBUG, VSCAN_DEBUG_HIGH);
     qDebug() << "VSCAN DRIVER READY";
 
-    if(canTimer) killTimer(canTimer);
-    canTimer = startTimer(1);
+    // Start the Can Tx/Rx every 1ms
+    canTimer.stop();
+    rxEvent = false;
+    canTimer.start(1);
     return true;
 
 }
@@ -160,8 +163,8 @@ void canDriver::driverClose(void){
     if(handle <= 0) return;
 
     // Termines the timer callback
-    if(canTimer) killTimer(canTimer);
-    canTimer = 0;
+    canTimer.stop();
+    rxEvent = false;
 
     // Close the device driver
     VSCAN_STATUS status = VSCAN_Close(handle);
@@ -187,25 +190,26 @@ void canDriver::driverClose(void){
  * @param canId: is the CANID address
  * @param data: is the eight data byte frame content.
  */
-void canDriver::sendOnCanSlot(ushort canId, QByteArray data){
+void canDriver::canSendFrame(void){
 
     VSCAN_MSG msg;
     DWORD written;
-    uchar len = data.size();
+    uchar len = txData.size();
     if(len > 8) len =8;
 
     msg.Flags = VSCAN_FLAGS_STANDARD;
-    msg.Id = canId;
+    msg.Id = txCanId;
     msg.Size = len;
 
     for(uchar i=0; i<msg.Size; i++) {
-        if(i < len) msg.Data[i] = data[i];
+        if(i < len) msg.Data[i] = txData.at(i);
         else msg.Data[i] = 0;
     }
 
 
     if(VSCAN_Write(handle, &msg, 1, &written) != VSCAN_ERR_OK) return;
     VSCAN_Flush(handle);
+
     return;
 }
 
@@ -222,71 +226,48 @@ void canDriver::sendOnCanSlot(ushort canId, QByteArray data){
  *
  * @param ev: QTimer::QTimerEvent parameter type;
  */
-void canDriver::timerEvent(QTimerEvent* ev)
-{
+void canDriver::canTimerEvent(void)
+{   
+    static uint8_t rxTmo;
 
-    /*
-    static ushort test_msg = 0;
-    QByteArray test_message;
-    test_msg++;
-
-
-    if(test_msg == 20){
-        printErrors();
-        test_message.append((uchar) 1);
-        test_message.append((uchar) 0);
-        test_message.append((uchar) 0);
-        test_message.append((uchar) 0);
-        test_message.append((uchar) 0);
-        test_message.append((uchar) 0);
-        test_message.append((uchar) 0);
-        test_message.append((uchar) 1);
-
-        test_msg = 0;
-        sendTestMessage(0x211, test_message);
-        return;
-    }
-    return;
-    */
-
-    if(ev->timerId() ==  canTimer)
-    {
-
+    if(rxEvent){
         rxmsg = 0;
         VSCAN_Read(handle, rxmsgs, VSCAN_NUM_MESSAGES, &rxmsg);
         if(rxmsg){
 
             for(uint i=0; i < (uint) rxmsg; i++){
                 rxCanId = rxmsgs[i].Id;
-                for(int j=0; j < 8; j++) rxCanData[j] = rxmsgs[i].Data[j];                
-                emit receivedCanFrame(rxCanId, rxCanData);
+                if(rxCanId == txCanId){
+                   for(int j=0; j < 8; j++) rxCanData[j] = rxmsgs[i].Data[j];
+                   INTERFACE->rxCanFrameHandle(&rxCanId, &rxCanData);
+                   emit receivedCanFrame(rxCanId, rxCanData);
+                   rxEvent = false;
+                   return;
+                }
             }
         }
 
+        if(!rxTmo){
+            rxCanId = txCanId;
+            for(int j=0; j < 8; j++) rxCanData[j] = 0;
+            INTERFACE->rxCanFrameHandle(&rxCanId, &rxCanData);
+            emit receivedCanFrame(rxCanId, rxCanData);
+            rxEvent = false;
+            return;
+        }else rxTmo--;
+
+    }else{
+       // Find the next client to be served
+       if(!INTERFACE->getNextTxFrame(&txCanId, &txData) ) return;
+       canSendFrame();
+       emit transmittedCanFrame(txCanId, txData);
+       rxEvent = true;
+       rxTmo = 10; // 5ms max tmo
     }
 
 }
 
-void canDriver::sendTestMessage(ushort canId, QByteArray data){
 
-    VSCAN_MSG msg;
-    DWORD written;
-    uchar len = data.size();
-    if(len > 8) len =8;
-
-    msg.Flags = VSCAN_FLAGS_STANDARD;
-    msg.Id = canId;
-    msg.Size = len;
-
-    for(uchar i=0; i<msg.Size; i++) {
-        if(i < len) msg.Data[i] = data[i];
-        else msg.Data[i] = 0;
-    }
-
-    if(VSCAN_Write(handle, &msg, 1, &written) != VSCAN_ERR_OK) return;
-    VSCAN_Flush(handle);
-    return;
-}
 
 void canDriver::printErrors(void){
     static DWORD flag_back = 0;
