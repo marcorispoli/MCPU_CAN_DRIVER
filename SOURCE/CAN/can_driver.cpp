@@ -239,7 +239,7 @@ void canDriver::canTimerEvent(void)
                 rxCanId = rxmsgs[i].Id;
                 if(rxCanId == txCanId){
                    for(int j=0; j < 8; j++) rxCanData[j] = rxmsgs[i].Data[j];
-                   INTERFACE->rxCanFrameHandle(&rxCanId, &rxCanData);
+                   SERVER->rxCanFrameHandle(&rxCanId, &rxCanData);
                    emit receivedCanFrame(rxCanId, rxCanData);
                    rxEvent = false;
                    return;
@@ -250,7 +250,7 @@ void canDriver::canTimerEvent(void)
         if(!rxTmo){
             rxCanId = txCanId;
             for(int j=0; j < 8; j++) rxCanData[j] = 0;
-            INTERFACE->rxCanFrameHandle(&rxCanId, &rxCanData);
+            SERVER->rxCanFrameHandle(&rxCanId, &rxCanData);
             emit receivedCanFrame(rxCanId, rxCanData);
             rxEvent = false;
             return;
@@ -258,7 +258,7 @@ void canDriver::canTimerEvent(void)
 
     }else{
        // Find the next client to be served
-       if(!INTERFACE->getNextTxFrame(&txCanId, &txData) ) return;
+       if(!SERVER->getNextTxFrame(&txCanId, &txData) ) return;
        canSendFrame();
        emit transmittedCanFrame(txCanId, txData);
        rxEvent = true;

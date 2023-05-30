@@ -62,7 +62,7 @@ bool Server::Start(void)
 void Server::incomingConnection(qintptr socketDescriptor)
 {
 
-    SocketItem* item = new SocketItem();
+    ServerItem* item = new ServerItem();
 
     item->socket = new QTcpSocket(this); // Create a new socket
     if(!item->socket->setSocketDescriptor(socketDescriptor))
@@ -94,7 +94,7 @@ void Server::incomingConnection(qintptr socketDescriptor)
 /**
  * Socket disconnected callback
  */
-void SocketItem::disconnected(void){
+void ServerItem::disconnected(void){
     emit itemDisconnected(this->id);
 }
 
@@ -103,7 +103,7 @@ void SocketItem::disconnected(void){
  *
  * @param error: the error code
  */
-void SocketItem::socketError(QAbstractSocket::SocketError error)
+void ServerItem::socketError(QAbstractSocket::SocketError error)
 {
     emit itemDisconnected(this->id);
     return;
@@ -135,7 +135,7 @@ void Server::disconnected(ushort id)
 
 
 
-ushort SocketItem::getItem(int* index, QByteArray* data, bool* data_ok){
+ushort ServerItem::getItem(int* index, QByteArray* data, bool* data_ok){
     *data_ok = false;
     bool is_hex = false;
     QString val;
@@ -169,7 +169,7 @@ ushort SocketItem::getItem(int* index, QByteArray* data, bool* data_ok){
  *
  * @param data: the pointer to the protocol frame to be decoded.
  */
-void SocketItem::handleSocketFrame(QByteArray* data){
+void ServerItem::handleSocketFrame(QByteArray* data){
 
     QByteArray frame;
     bool is_register;
@@ -255,10 +255,10 @@ void SocketItem::handleSocketFrame(QByteArray* data){
  *
  * Because a stream can contain multilple formatted frames,
  * this function unpack each frame sndind the content to the \n
- * SocketItem::handleSocketFrame() to decode a single data content.
+ * ServerItem::handleSocketFrame() to decode a single data content.
  *
  */
-void SocketItem::socketRxData()
+void ServerItem::socketRxData()
 {
     QByteArray frame;    
 
@@ -290,7 +290,7 @@ void SocketItem::socketRxData()
  *
  * @param data: the frame data content
  */
-void SocketItem::socketTxData(QByteArray data)
+void ServerItem::socketTxData(QByteArray data)
 {
     this->socket->write(data);
     this->socket->waitForBytesWritten(100);

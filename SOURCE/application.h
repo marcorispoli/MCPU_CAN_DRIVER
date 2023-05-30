@@ -79,24 +79,30 @@
 #include "can_driver.h"
 #include "server.h"
 #include "window.h"
+#include "interface.h"
+#include "sysconfig.h"
 
-
+#define SYSCONFIG       pSysConfig
 #define WINDOW          pWindow
 #define DEBUG           pWindow
-#define INTERFACE       pServer
+#define SERVER          pServer
 #define CAN             pCanDriver
+#define INTERFACE       pInterface
 
 // Global definitions
 #ifdef MAIN_CPP
     Server*   pServer;
     canDriver*   pCanDriver;
     debugWindow* pWindow;
+    Interface*                  INTERFACE;
+    sysConfig*                  SYSCONFIG;
 
 #else
-    extern  Server*   INTERFACE;
+    extern  Server*      SERVER;
     extern  canDriver*   CAN;
     extern  debugWindow* WINDOW ;
-
+    extern Interface*    INTERFACE;
+    extern sysConfig*    SYSCONFIG;
 #endif
 
 
@@ -111,9 +117,10 @@
     */
     namespace Application
     {
-       static const char*  SERVER_IP = "127.0.01"; //!< Server Interface Ip Address
-       static const unsigned short  SERVER_PORT = 10001; //!< Server Interface Port
-       static const canDriver::_CanBR CAN_BAUDRATE = canDriver::_CAN_1000K;
+        static const uint APP_MAJ_REV = 0;
+        static const uint APP_MIN_REV = 1;
+        static const uint APP_SUB_REV = 0;
+        static const canDriver::_CanBR CAN_BAUDRATE = canDriver::_CAN_1000K;
 
     }
 

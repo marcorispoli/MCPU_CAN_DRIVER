@@ -31,7 +31,9 @@ SOURCES += \
     $${TARGET_SOURCE}/SERVER/server.cpp \
     $${TARGET_SOURCE}/CAN/can_driver.cpp \
     $${TARGET_SOURCE}/WINDOW/window.cpp \
-
+    $${SHARED}/APPLICATION_INTERFACE/applicationInterface.cpp \
+    $${TARGET_SOURCE}/INTERFACE/interface.cpp \
+    $${SHARED}/CONFIGFILE/configfile.cpp \
 
 HEADERS += \
     $${TARGET_SOURCE}/application.h \
@@ -40,7 +42,10 @@ HEADERS += \
     $${TARGET_SOURCE}/CAN/can_driver.h \
     $${TARGET_SOURCE}/WINDOW/window.h \
     $${TARGET_SOURCE}/DLL/vs_can_api.h \
-
+    $${SHARED}/APPLICATION_INTERFACE/applicationInterface.h \
+    $${TARGET_SOURCE}/INTERFACE/interface.h \
+    $${SHARED}/CONFIGFILE/sysconfig.h \
+    $${SHARED}/CONFIGFILE/configfile.h \
 
 # Aggiunge tutti i path di progetto
 INCLUDEPATH += \    
@@ -50,7 +55,9 @@ INCLUDEPATH += \
     $${TARGET_SOURCE}/WINDOW \
     $${SHARED}/APPLOG \
     $${TARGET_SOURCE} \
-
+    $${SHARED}/APPLICATION_INTERFACE \
+    $${TARGET_SOURCE}/INTERFACE \
+    $${SHARED}/CONFIGFILE \
 
 DEPENDPATH += \
     $${TARGET_SOURCE}/DLL \

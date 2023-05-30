@@ -116,14 +116,14 @@
  *
  * \ingroup interfaceModule
  */
-class SocketItem: public QObject
+class ServerItem: public QObject
 {
      Q_OBJECT
 
 public:
 
-    explicit SocketItem(){};
-    ~SocketItem(){};
+    explicit ServerItem(){};
+    ~ServerItem(){};
 
 signals:
     void itemDisconnected(ushort id); //!< Signal of the client disconnection event
@@ -189,7 +189,7 @@ protected:
 
 private:
 
-    QList<SocketItem*>  socketList;    //!< List of Sockets
+    QList<ServerItem*>  socketList;    //!< List of Sockets
     QHostAddress        localip;       //!< Address of the local server
     quint16             localport;     //!< Port of the local server
     ushort              idseq;
