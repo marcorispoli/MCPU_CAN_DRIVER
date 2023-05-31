@@ -10,7 +10,7 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    appLog(argc, argv, "C:/OEM/Gantry/Log/CanDriver.log", debugWindow::debugMessageHandler);
+    appLog(argc, argv, "C:/OEM/Gantry/Log/mcpu_candriver.log", debugWindow::debugMessageHandler);
 
     // Create the Window Log if necessary
     if(appLog::isWindow){
