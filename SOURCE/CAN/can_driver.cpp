@@ -6,6 +6,7 @@
  */
 canDriver::canDriver(){
 
+    deviceOpen = false;
     connect(&canTimer, SIGNAL(timeout()), this, SLOT(canTimerEvent()), Qt::UniqueConnection);
     for(int i=0; i<8; i++)    rxCanData.append((uchar) 0);
     handle = 0;
@@ -149,6 +150,8 @@ bool canDriver::driverOpen(_CanBR BR, bool loopback){
     canTimer.stop();
     rxEvent = false;
     canTimer.start(1);
+
+    deviceOpen = true;
     return true;
 
 }

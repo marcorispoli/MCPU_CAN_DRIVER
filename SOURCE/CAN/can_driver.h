@@ -77,6 +77,14 @@ class canDriver: public QObject
     void driverClose(void); //!< Close the communication wioth the System Driver
     bool driverOpen(_CanBR BR, bool loopback); //!< Open the communication with the System Driver
 
+    inline bool isDeviceOpen(void){return deviceOpen;}
+    inline uint8_t getApiMaj(void){return version.Major;}
+    inline uint8_t getApiMin(void){return version.Minor;}
+    inline uint8_t getApiSub(void){return version.SubMinor;}
+    inline uint32_t getHWSn(void){return hwparam.SerialNr;}
+    inline uint8_t getHWrev(void){return hwparam.HwVersion;}
+    inline uint8_t getHWsrev(void){return hwparam.SwVersion;}
+
 
 signals:
     void receivedCanFrame(ushort id, QByteArray data); //!< Signal emitted when a CAN frame is received
@@ -89,6 +97,7 @@ private slots:
     void canTimerEvent(void);   //!< Timer scheduled to read the queue of the received messages
 
 private:
+    bool deviceOpen;
     VSCAN_API_VERSION   version;    //!< System Driver Api Version
     VSCAN_HWPARAM       hwparam;    //!< System Driver Hardware Version
     VSCAN_HANDLE        handle;     //!< Handle of the driver

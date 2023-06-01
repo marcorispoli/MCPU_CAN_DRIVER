@@ -68,6 +68,7 @@ private slots:
 
 
 private:
+    uint GetRevision( QList<QString>* answer);
     uint GetStatus( QList<QString>* answer);
 
 
