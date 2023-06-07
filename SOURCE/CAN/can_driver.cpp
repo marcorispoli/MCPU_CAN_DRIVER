@@ -240,13 +240,11 @@ void canDriver::canTimerEvent(void)
 
             for(uint i=0; i < (uint) rxmsg; i++){
                 rxCanId = rxmsgs[i].Id;
-                if(rxCanId == txCanId){
-                   for(int j=0; j < 8; j++) rxCanData[j] = rxmsgs[i].Data[j];
-                   SERVER->rxCanFrameHandle(&rxCanId, &rxCanData);
-                   emit receivedCanFrame(rxCanId, rxCanData);
-                   rxEvent = false;
-                   return;
-                }
+                for(int j=0; j < 8; j++) rxCanData[j] = rxmsgs[i].Data[j];
+                SERVER->rxCanFrameHandle(&rxCanId, &rxCanData);
+                emit receivedCanFrame(rxCanId, rxCanData);
+                rxEvent = false;
+                return;
             }
         }
 
@@ -265,7 +263,7 @@ void canDriver::canTimerEvent(void)
        canSendFrame();
        emit transmittedCanFrame(txCanId, txData);
        rxEvent = true;
-       rxTmo = 10; // 5ms max tmo
+       rxTmo = 100; // 5ms max tmo
     }
 
 }
