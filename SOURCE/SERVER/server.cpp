@@ -333,6 +333,38 @@ void Server::rxCanFrameHandle(ushort* canId, QByteArray* data){
 
 }
 
+/**
+ * @brief This function receives the data coming from the CAN network.
+ *
+ * The Data packet received from the CAN network is forwarded to \n
+ * the connected Slaves that has been registered with the canId identifier \n
+ * or with the broadcast address (0).
+ *
+ * The Data is put in the socket packet as for the protocol:\n
+ * <D> (uchar) b0 .. (uchar) b7
+ *
+ *
+ * @param canId: this is the canId of the can message
+ * @param data: this is the data content of the frame
+ */
+void Server::rxAsyncCanFrameHandle(ushort* canId, QByteArray* data){
+    QByteArray frame;
+    frame.append("<A ");
+    frame.append(QString("%1 ").arg(*canId).toLatin1());
+
+    for(int i=0; i< 8;i++){
+        if(i >= data->size()) frame.append("0 ");
+        else frame.append(QString("%1 ").arg((uchar) data->at(i)).toLatin1());
+    }
+    frame += " > \n\r";
+
+    for(int i =0; i< socketList.size(); i++){
+            socketList[i]->socket->write(frame);
+            socketList[i]->socket->waitForBytesWritten(100);
+    }
+
+}
+
 bool Server::getNextTxFrame(uint16_t* pcanId, QByteArray* pdata){
     static uint8_t idx =0;
 

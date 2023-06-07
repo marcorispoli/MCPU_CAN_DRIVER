@@ -233,38 +233,48 @@ void canDriver::canTimerEvent(void)
 {   
     static uint8_t rxTmo;
 
-    if(rxEvent){
-        rxmsg = 0;
-        VSCAN_Read(handle, rxmsgs, VSCAN_NUM_MESSAGES, &rxmsg);
-        if(rxmsg){
+    // Read anyway in order to discard unexpected messages
+    rxmsg = 0;
+    VSCAN_Read(handle, rxmsgs, VSCAN_NUM_MESSAGES, &rxmsg);
+    if(rxmsg){
+        rxTmo = 10;
+        for(uint i=0; i < (uint) rxmsg; i++){
+            rxCanId = rxmsgs[i].Id;
+            for(int j=0; j < 8; j++) rxCanData[j] = rxmsgs[i].Data[j];
+            emit receivedCanFrame(rxCanId, rxCanData); // Only for debug
 
-            for(uint i=0; i < (uint) rxmsg; i++){
-                rxCanId = rxmsgs[i].Id;
-                for(int j=0; j < 8; j++) rxCanData[j] = rxmsgs[i].Data[j];
-                SERVER->rxCanFrameHandle(&rxCanId, &rxCanData);
-                emit receivedCanFrame(rxCanId, rxCanData);
-                rxEvent = false;
-                return;
-            }
+            // This condition is because the CANOpen can deliver asynch messages
+            if ( (( rxCanId >= 0x100 ) && (rxCanId <= 0x17F) && (rxCanId == txCanId)) || // Gantry Protocol Device
+                 (( rxCanId >= 0x580 ) && (rxCanId <= 0x5FF) && ((rxCanId & 0x7f) == (txCanId & 0x7f)))) // CANOpen: SDO receive
+                {
+                    if(rxEvent){
+                        SERVER->rxCanFrameHandle(&rxCanId, &rxCanData);
+                        rxEvent = false;
+                        break;
+                    }
+            }else SERVER->rxAsyncCanFrameHandle(&rxCanId, &rxCanData); // Sends Asynch frames
         }
+    }
 
+    // Verify if there is a timeout condition
+    if(rxEvent){
         if(!rxTmo){
             rxCanId = txCanId;
             for(int j=0; j < 8; j++) rxCanData[j] = 0;
             SERVER->rxCanFrameHandle(&rxCanId, &rxCanData);
-            emit receivedCanFrame(rxCanId, rxCanData);
             rxEvent = false;
-            return;
         }else rxTmo--;
-
-    }else{
-       // Find the next client to be served
-       if(!SERVER->getNextTxFrame(&txCanId, &txData) ) return;
-       canSendFrame();
-       emit transmittedCanFrame(txCanId, txData);
-       rxEvent = true;
-       rxTmo = 100; // 5ms max tmo
+        return;
     }
+
+
+
+   // Try to send a new message: Find the next client to be served
+   if(!SERVER->getNextTxFrame(&txCanId, &txData) ) return;
+   canSendFrame();
+   emit transmittedCanFrame(txCanId, txData);
+   rxEvent = true;
+   rxTmo = 10; // 5ms max tmo
 
 }
 

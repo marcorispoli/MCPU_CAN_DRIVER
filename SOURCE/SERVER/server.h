@@ -176,7 +176,8 @@ public:
     static const long _DEFAULT_TX_TIMEOUT = 5000;    //!< Default timeout in ms for tx data
     bool Start(void);   //! Starts listening the server on the IP&Port
     bool getNextTxFrame(uint16_t* canId, QByteArray* data); //! Return the next frame to be sent
-    void rxCanFrameHandle(ushort* canId, QByteArray* data); //!< Slot to be connected to the canDriver reception signal
+    void rxCanFrameHandle(ushort* canId, QByteArray* data); //!< Handles the can rx/tx data to be sent to the client
+    void rxAsyncCanFrameHandle(ushort* canId, QByteArray* data); //!<  Handles the Asynch data to be sent to the client
 
 signals:
 
