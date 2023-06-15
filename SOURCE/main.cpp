@@ -18,7 +18,11 @@ int main(int argc, char *argv[])
         WINDOW->show();
     }
 
-    SYSCONFIG = new sysConfig();
+    SYSCONFIG = new sysConfig(configFile::_CFG_READONLY);
+    if(!SYSCONFIG->isFormatCorrect()) {
+        qDebug() << " WRONG CONFIGURATION FILE FORMAT!";
+        exit(1);
+    }
 
     SERVER = new Server(SYSCONFIG->getParam<QString>(SYS_CAN_PROCESS_PARAM,SYS_CAN_IP),SYSCONFIG->getParam<uint>(SYS_CAN_PROCESS_PARAM,SYS_CAN_PORT));
     INTERFACE = new Interface();

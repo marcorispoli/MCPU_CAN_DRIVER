@@ -35,17 +35,18 @@
  *
  *  ## ACCEPTANCE FILTER FRAME FORMAT
  *
- *  The Client need to open an Acceptance filter in order to receive incoming Can frames.
+ *  The Client need to open a Point to Point  Acceptance filter: the filter
+ *  is in the form of a address range: filter_address_low, filter_address_high.
  *
  *  The rule to accept a CAN frame with a given canId address is:
  *
  *
- *      Acceptance Rule: (canId & filter_mask) == filter_address;
+ *      Acceptance Rule: (canId >= filter_address_low ) && (canId <= filter_address_high )
  *
  *  The Acceptance Filter data format is:
  *
  *
- *       <F filter_mask filter_address >
+ *       <F filter_address_low filter_address_high >
  *
  *  Where
  *  - '<' and '>' are frame delimiters
@@ -56,13 +57,13 @@
  *
  *      NOTE: space characters are ignored for the frame syntax;
  *
- *  The filter_mask and filter_address arguments can be:
+ *  The address arguments can be:
  *  - Decimal format: example, 1356;
  *  - Hexadecimal format: example, 0x1345
  *
  *  The Acceptance filter workflow is:
- *  - Client sends <F mask address>
- *  - Server answer replying the frame: <F mask address>
+ *  - Client sends <F filter_address_low filter_address_high >
+ *  - Server answer replying the frame: <F filter_address_low filter_address_high >
  *
  *
  *  ## CAN DATA FRAME FORMAT
@@ -137,10 +138,9 @@ public slots:
     void socketTxData(QByteArray);//!< Socket data to be transmitted
 
 public:
-    QTcpSocket* socket;//!< Pointer to the socket;
-    ushort id;          //!< Identifier of the client
-    ushort filter_mask; //!< Filter Acceptance Mask
-    ushort filter_address;//!< Reception Address
+    QTcpSocket* socket; //!< Pointer to the socket;
+    ushort id;          //!< Identifier of the socket client
+    ushort rxCanId;     //!< canId di ricezione
 
     uint16_t txCanId;
     QByteArray txData;
@@ -175,9 +175,9 @@ public:
 
     static const long _DEFAULT_TX_TIMEOUT = 5000;    //!< Default timeout in ms for tx data
     bool Start(void);   //! Starts listening the server on the IP&Port
-    bool getNextTxFrame(uint16_t* canId, QByteArray* data); //! Return the next frame to be sent
-    void rxCanFrameHandle(ushort* canId, QByteArray* data); //!< Handles the can rx/tx data to be sent to the client
-    void rxAsyncCanFrameHandle(ushort* canId, QByteArray* data); //!<  Handles the Asynch data to be sent to the client
+    bool getNextTxFrame(ushort* client_id, uint16_t* pRxCanId, uint16_t* pTxCanId,  QByteArray* pdata); //! Return the next frame to be sent
+    void rxCanFrameHandle(ushort client_id, ushort canId, QByteArray* data); //!< Handles the can rx/tx data to be sent to the client
+    void rxAsyncCanFrameHandle(ushort canId, QByteArray* data); //!<  Handles the Asynch data to be sent to the client
 
 signals:
 

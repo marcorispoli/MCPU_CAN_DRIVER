@@ -115,6 +115,8 @@ private:
     void canSendFrame(void); //!< Sends on the CAN bus
     QByteArray txData;
     uint16_t txCanId;
+
+
 };
 
 #endif // VSCAN_CAN_DRIVER_H

@@ -82,6 +82,7 @@
 #include "interface.h"
 #include "sysconfig.h"
 
+
 #define SYSCONFIG       pSysConfig
 #define WINDOW          pWindow
 #define DEBUG           pWindow

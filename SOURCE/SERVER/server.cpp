@@ -85,8 +85,7 @@ void Server::incomingConnection(qintptr socketDescriptor)
     connect(item->socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),item,SLOT(socketError(QAbstractSocket::SocketError)),Qt::UniqueConnection);
 
     item->id = this->idseq++;
-    item->filter_mask = 0xFFFF;
-    item->filter_address = 0; // No device registered yet
+    item->rxCanId = 0;
     item->dataPresent = false;
     return;
  }
@@ -200,18 +199,10 @@ void ServerItem::handleSocketFrame(QByteArray* data){
     if(is_register){// Can Registering Frame: set the reception mask and address
 
 
-        filter_mask = getItem(&i, data, &data_ok);
+        rxCanId = getItem(&i, data, &data_ok);
         if(!data_ok){
-            filter_mask = 0xFFFF;
-            qDebug() << "CLIENT REGISTRATION WRONG MASK FORMAT";
-            return;
-        }
-
-        filter_address = getItem(&i, data, &data_ok) & filter_mask;
-        if(!data_ok){
-            filter_mask = 0xFFFF;
-            filter_address = 0;
-            qDebug() << "CLIENT REGISTRATION WRONG ADDRESS FORMAT";
+            rxCanId = 0;
+            qDebug() << "CLIENT REGISTRATION TO A DEVICE FAILED: WRONG DEVICE FORMAT";
             return;
         }
 
@@ -220,8 +211,9 @@ void ServerItem::handleSocketFrame(QByteArray* data){
         frame.append(">");
         emit sendToClient(frame);
 
-        qDebug() << QString("CLIENT REGISTERED TO: MASK=0x%1, ADDR:0x%2").arg(filter_mask,1,16).arg(filter_address,1,16);
+        qDebug() << QString("CLIENT REGISTERED FOR RECEPTION TO ADDR=0x%1").arg(rxCanId,1,16);
         return;
+
     }else{
 
         // A data is waiting to be sent
@@ -313,10 +305,10 @@ void ServerItem::socketTxData(QByteArray data)
  * @param canId: this is the canId of the can message
  * @param data: this is the data content of the frame
  */
-void Server::rxCanFrameHandle(ushort* canId, QByteArray* data){
+void Server::rxCanFrameHandle(ushort client_id, ushort canId, QByteArray* data){
     QByteArray frame;
     frame.append("<D ");
-    frame.append(QString("%1 ").arg(*canId).toLatin1());
+    frame.append(QString("%1 ").arg(canId).toLatin1());
 
     for(int i=0; i< 8;i++){
         if(i >= data->size()) frame.append("0 ");
@@ -324,8 +316,9 @@ void Server::rxCanFrameHandle(ushort* canId, QByteArray* data){
     }
     frame += " > \n\r";
 
+    // Sends to all the client matching the Receprion Acceptance filter
     for(int i =0; i< socketList.size(); i++){
-        if( (socketList[i]->filter_mask & *canId) == (socketList[i]->filter_address)){
+        if(socketList[i]->id == client_id){
             socketList[i]->socket->write(frame);
             socketList[i]->socket->waitForBytesWritten(100);
         }
@@ -347,10 +340,10 @@ void Server::rxCanFrameHandle(ushort* canId, QByteArray* data){
  * @param canId: this is the canId of the can message
  * @param data: this is the data content of the frame
  */
-void Server::rxAsyncCanFrameHandle(ushort* canId, QByteArray* data){
+void Server::rxAsyncCanFrameHandle(ushort canId, QByteArray* data){
     QByteArray frame;
     frame.append("<A ");
-    frame.append(QString("%1 ").arg(*canId).toLatin1());
+    frame.append(QString("%1 ").arg(canId).toLatin1());
 
     for(int i=0; i< 8;i++){
         if(i >= data->size()) frame.append("0 ");
@@ -358,14 +351,17 @@ void Server::rxAsyncCanFrameHandle(ushort* canId, QByteArray* data){
     }
     frame += " > \n\r";
 
+    // Sends to all the client with the deviceId matching the canId &0x3F
     for(int i =0; i< socketList.size(); i++){
+        if((canId & 0x3F) == (socketList[i]->rxCanId & 0x3F)){
             socketList[i]->socket->write(frame);
             socketList[i]->socket->waitForBytesWritten(100);
+        }
     }
 
 }
 
-bool Server::getNextTxFrame(uint16_t* pcanId, QByteArray* pdata){
+bool Server::getNextTxFrame(ushort* client_id, uint16_t* pRxCanId, uint16_t* pTxCanId,  QByteArray* pdata){
     static uint8_t idx =0;
 
 
@@ -373,8 +369,10 @@ bool Server::getNextTxFrame(uint16_t* pcanId, QByteArray* pdata){
         if(idx >= socketList.size()) idx = 0;
 
         if(socketList[idx]->dataPresent){
-            *pcanId = (socketList[idx]->txCanId);
+            *pTxCanId = (socketList[idx]->txCanId);
+            *pRxCanId = (socketList[idx]->rxCanId);
             *pdata =  (socketList[idx]->txData);
+            *client_id = socketList[idx]->id;
             socketList[idx]->dataPresent = false;
             idx++;
             return true;

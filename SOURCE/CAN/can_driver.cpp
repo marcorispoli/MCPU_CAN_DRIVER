@@ -231,38 +231,37 @@ void canDriver::canSendFrame(void){
  */
 void canDriver::canTimerEvent(void)
 {   
-    static uint8_t rxTmo;
+    static uint8_t rxTmo = 0;
+    static ushort  p2p_rxCanId = 0;
+    static ushort  p2p_clientId = 0;
+
 
     // Read anyway in order to discard unexpected messages
     rxmsg = 0;
     VSCAN_Read(handle, rxmsgs, VSCAN_NUM_MESSAGES, &rxmsg);
     if(rxmsg){
         rxTmo = 10;
+
         for(uint i=0; i < (uint) rxmsg; i++){
             rxCanId = rxmsgs[i].Id;
             for(int j=0; j < 8; j++) rxCanData[j] = rxmsgs[i].Data[j];
             emit receivedCanFrame(rxCanId, rxCanData); // Only for debug
 
-            // This condition is because the CANOpen can deliver asynch messages
-            if ( (( rxCanId >= 0x100 ) && (rxCanId <= 0x17F) && (rxCanId == txCanId)) || // Gantry Protocol Device
-                 (( rxCanId >= 0x580 ) && (rxCanId <= 0x5FF) && ((rxCanId & 0x7f) == (txCanId & 0x7f)))) // CANOpen: SDO receive
-                {
-                    if(rxEvent){
-                        SERVER->rxCanFrameHandle(&rxCanId, &rxCanData);
-                        rxEvent = false;
-                        break;
-                    }
-            }else SERVER->rxAsyncCanFrameHandle(&rxCanId, &rxCanData); // Sends Asynch frames
+            // If the message is the expected answer to a point to point message
+            if(rxCanId == p2p_rxCanId){
+                SERVER->rxCanFrameHandle(p2p_clientId, rxCanId, &rxCanData);
+                p2p_rxCanId = 0;
+                break;
+            }else SERVER->rxAsyncCanFrameHandle(rxCanId, &rxCanData); // Sends Asynch frames
         }
     }
 
     // Verify if there is a timeout condition
-    if(rxEvent){
+    if(p2p_rxCanId){
         if(!rxTmo){
-            rxCanId = txCanId;
             for(int j=0; j < 8; j++) rxCanData[j] = 0;
-            SERVER->rxCanFrameHandle(&rxCanId, &rxCanData);
-            rxEvent = false;
+            SERVER->rxCanFrameHandle(p2p_clientId, p2p_rxCanId, &rxCanData);
+            p2p_rxCanId = 0;
         }else rxTmo--;
         return;
     }
@@ -270,10 +269,14 @@ void canDriver::canTimerEvent(void)
 
 
    // Try to send a new message: Find the next client to be served
-   if(!SERVER->getNextTxFrame(&txCanId, &txData) ) return;
+   if(!SERVER->getNextTxFrame(&p2p_clientId, &p2p_rxCanId, &txCanId, &txData) ){
+       p2p_rxCanId = 0;
+       return;
+   }
+
+
    canSendFrame();
-   emit transmittedCanFrame(txCanId, txData);
-   rxEvent = true;
+   emit transmittedCanFrame(txCanId, txData);   
    rxTmo = 10; // 5ms max tmo
 
 }
