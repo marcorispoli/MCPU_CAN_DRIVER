@@ -4,16 +4,49 @@
 /*!
  * \defgroup  candriverModule CAN Driver Module.
  *
- * This Module implements the communication protocol with the Gantry.
+ * This Module implements the transmission and reception activity
+ * with the CAN bus.
  *
  * # DEVICE DRIVER OVERVIEW
  *
  * This Module is based on the vs_can_api.dll library interface \n
- * that allows to handle the  USB-CAN Plus device from VSCAN.
+ * that allows to handle the VSCAN/USB-CAN Plus device converter.
  *
- * The module needs that in the Window system it is installed the \n
- * device driver and all the initialization procedures has been completed.
+ * In order to properly connect the Converter, the Module device driver shall be installed in Windows OS
+ * and the setup procedures shall be completed.
  * See the [VSCAN Manual](https://www.vscom.de/download/multiio/others/info/VSCAN_Manual.pdf) for details.
+ *
+ * The module basically sends can frame coming from Processes inside the PC to the CAN BUS,
+ * and route the CAN BUS frames to the Process sender.
+ * There are two subject in the communication:
+ * - The Process connected to the TCP/IP server socket;
+ * - The remote device connected through the CAN bus;
+ *
+ * Every process connected is registered with only one reception address: this address rapresent the Point to Point address;
+ *
+ * The module, every 1ms polls the connected process in order to send a P2P frame:
+ * - when a P2P frame is sent, no more frame will be sent until a frame matching the P2P address of the sender is received.
+ * - if the answer is not received in 5ms, an error frame is sent back to the sender;
+ *
+ * When a P2P exchange completes, the next P2P frame will be fetched from another connected process different from the previous one,
+ * to guarantee that all the connected process can have the same priority.
+ *
+ * In case a received frame with an address not matching the expected address should be received,
+ * it will be forwarded as an ASYNC frame to all the connected processes wich the lower 7 bit of the P2P address
+ * should match the lower 7 bit of the received address.
+ * The lower 7 bit should corrispond to a unique Device ID in the Network.
+ *
+ *
+ * The Process can only send point to point frames and receive point to point answer or an asynch frame.
+ * The Remote device shall answer to a point to point frame
+ * The module basically provides two communication types:
+ * - Point to point data exchange: The sender Process can only send Point to Point frames and receive a point to point answer or an Asynch frame;
+ * - Asynch data frame: ;
+ *
+ *
+ *
+ * The module every millisecond polls the CAN BUS reception for incoming frame
+ * and sends a frame coming from the
  *
  * The Device Gets data coming from the Ethernet Server interface then forwards them to the CAN network and viceversa.
  *
